@@ -749,6 +749,7 @@ class ProductHelper extends BaseHelper
                     $tempProduct = $productHelper->load($id);
                     $thumbnailUrl = $this->imageHelper->init($tempProduct, 'thumbnail')->resize(75, 75)->getUrl();
                     $smallImageUrl = $this->imageHelper->init($tempProduct, 'small_image')->resize(135, 135)->getUrl();
+                    $productUrl =  $selection->getProductUrl();
                     //now build named array
                     $selectionArray = array(
                         "name" => $name,
@@ -758,6 +759,7 @@ class ProductHelper extends BaseHelper
                         "savings_amount" => $savings,
                         "thumbnail_image" => $thumbnailUrl,
                         "small_image" => $smallImageUrl,
+                        "url"=>$productUrl
                     );
                     //add named array to bigger array
                     $selectionsCollection[$selectionID] = $selectionArray;
