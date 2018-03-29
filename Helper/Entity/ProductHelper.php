@@ -746,13 +746,13 @@ class ProductHelper extends BaseHelper
                     //get savings
                     $savings  = sprintf("%.2f", $regularPrice - $bundlePrice);
                     //get images
-                    $tempProduct = $productHelper->load($id);
-                    $thumbnailUrl = $this->imageHelper->init($tempProduct, 'thumbnail')->resize(75, 75)->getUrl();
-                    $smallImageUrl = $this->imageHelper->init($tempProduct, 'small_image')->resize(135, 135)->getUrl();
+                    $tempSelectionProduct = $productHelper->load($id);
+                    $thumbnailUrl = $this->imageHelper->init($tempSelectionProduct, 'thumbnail')->resize(75, 75)->getUrl();
+                    $smallImageUrl = $this->imageHelper->init($tempSelectionProduct, 'small_image')->resize(135, 135)->getUrl();
                     //get item url
                     $productUrl =  $selection->getProductUrl();
                     //get visibility
-                    $visibility = $tempProduct->getVisibility();
+                    $visibility = $tempSelectionProduct->getVisibility();
                     //now build named array
                     $selectionArray = array(
                         "name" => $name,
