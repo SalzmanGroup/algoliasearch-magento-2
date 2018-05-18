@@ -422,42 +422,39 @@ class ProductHelper
 
         $this->logger->stop('CREATE RECORD ' . $product->getId() . ' ' . $this->logger->getStoreName($storeId));
 
-        /* Version 1.6.0 Bundle Changes For WLL */
+        
+        $bundleProductItems = $this->getBundleProductItems($product);
+        if (count($bundleProductItems)) {
+            $customData['bundle_items'] = $bundleProductItems; // Support bundle items for version 1.6.0
+        }
+        $childIds = $this->getChildProductIds($product);
+        if (count($childIds)) {
+            $customData['children_ids'] = $childIds; // Support child products for version 1.6.0
+        }
+
+        return $customData;
+    }
+
+    private function getBundleProductItems(Product $product){
+        $bundleProductItems = [];
         $type = $product->getTypeId();
-        //build item selection JSON for a bundle product
         if ($type == 'bundle') {
-            //get all available item selections for bundle
             $bundleSelections = $product->getTypeInstance(true)->getSelectionsCollection($product->getTypeInstance(true)->getOptionsIds($product),$product);
             if(count($bundleSelections) > 0){
-                //create ImageFactory instance
-                $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
-                $productHelper = $objectManager->get('\Magento\Catalog\Model\Product');
-                //parent array (JSON)
-                $selectionsCollection = [];
-                //loop thru each item, create an array, add it to JSON
+                $productHelper = $this->objectManager->get('\Magento\Catalog\Model\Product');
                 foreach ($bundleSelections as $selection){
-                    //get id
                     $id = $selection->getId();
-                    //get name
                     $name = $selection->getName();
-                    //get selectionID
                     $selectionID = $selection->getSelectionId();
-                    //get reg price
                     $regularPrice =  sprintf("%.2f", $selection->getFinalPrice());
-                    //get bundle price
                     $bundlePrice = sprintf("%.2f", $product->getPriceInfo()->getPrice('bundle_option')->getOptionSelectionAmount($selection)->getValue());
-                    //get savings
                     $savings  = sprintf("%.2f", $regularPrice - $bundlePrice);
-                    //get images
-                    $tempProduct = $productHelper->load($id);
-                    $thumbnailUrl = $this->imageHelper->init($tempProduct, 'thumbnail')->resize(75, 75)->getUrl();
-                    $smallImageUrl = $this->imageHelper->init($tempProduct, 'small_image')->resize(135, 135)->getUrl();
-                    //get item url
+                    $temporaryProduct = $productHelper->load($id);
+                    $thumbnailUrl = $this->imageHelper->init($temporaryProduct, 'thumbnail')->resize(75, 75)->getUrl();
+                    $smallImageUrl = $this->imageHelper->init($temporaryProduct, 'small_image')->resize(135, 135)->getUrl();
                     $productUrl =  $selection->getProductUrl();
-                    //get visibility
-                    $visibility = $tempProduct->getVisibility();
-                    //now build named array
-                    $selectionArray = array(
+                    $visibility = $temporaryProduct->getVisibility();
+                    $selectionDataArray = array(
                         "name" => $name,
                         "product_id" => $id,
                         "regular_price" => $regularPrice,
@@ -468,17 +465,37 @@ class ProductHelper
                         "url"=>$productUrl,
                         "visibility"=>$visibility
                     );
-                    //add named array to bigger array
-                    $selectionsCollection[$selectionID] = $selectionArray;
+                    $bundleProductItems[$selectionID] = $selectionDataArray;
                 }
-                //add selection items to Algolia
-                $customData['bundle_items'] = $selectionsCollection;
             }
         }
-        /* End Changes */
-        
-        
-        return $customData;
+
+        return $bundleProductItems;
+    }
+
+    private function getChildProductIds(Product $product){
+        $childIds = [];
+
+        $type = $product->getTypeId();
+        if ($type === 'configurable' || $type === 'grouped' || $type === 'bundle') {
+            if ($type === 'bundle') {
+
+                /** @var \Magento\Bundle\Model\Product\Type $typeInstance */
+                $typeInstance = $product->getTypeInstance();
+
+                $selection = $typeInstance->getSelectionsCollection($typeInstance->getOptionsIds($product), $product);
+                foreach ($selection as $option) {
+                    $childIds[] = $option->getProductId();
+                }
+            }
+
+            if ($type === 'configurable' || $type === 'grouped') {
+                $childIds = $product->getTypeInstance()->getChildrenIds($product->getId());
+                $childIds = call_user_func_array('array_merge', $childIds);
+            }
+        }
+
+        return $childIds;
     }
 
     private function getSubProducts(Product $product)
@@ -846,7 +863,6 @@ class ProductHelper
 
         $searchableAttributes[] = 'children_ids'; // Support child products for version 1.6.0
 
-
         $searchableAttributes = array_values(array_unique($searchableAttributes));
 
         return $searchableAttributes;
@@ -912,11 +928,11 @@ class ProductHelper
             }
         }
 
-        $attributesForFaceting[] = 'children_ids'; // Support child products for version 1.6.0
-
         if ($this->configHelper->replaceCategories($storeId) && !in_array('categories', $attributesForFaceting, true)) {
             $attributesForFaceting[] = 'categories';
         }
+
+        $attributesForFaceting[] = 'children_ids'; // Support child products for version 1.6.0
 
         return $attributesForFaceting;
     }
