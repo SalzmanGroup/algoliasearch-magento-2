@@ -1,8 +1,12 @@
-requirejs(['algoliaBundle'], function(algoliaBundle) {
+requirejs(['algoliaBundle','Magento_Catalog/js/price-utils'], function(algoliaBundle, priceUtils) {
 	algoliaBundle.$(function ($) {
-		
+
 		/** We have nothing to do here if instantsearch is not enabled **/
 		if (!algoliaConfig.instant.enabled || !(algoliaConfig.isSearchPage || !algoliaConfig.autocomplete.enabled)) {
+			return;
+		}
+
+		if (!algoliaConfig.autocomplete.enabled && $(algoliaConfig.autocomplete.selector).length == 0) {
 			return;
 		}
 		
@@ -66,6 +70,11 @@ requirejs(['algoliaBundle'], function(algoliaBundle) {
 		 * Docs: https://community.algolia.com/instantsearch.js/
 		 **/
 		
+		var ruleContexts = ['']; // Empty context to keep BC for already create rules in dashboard
+		if (algoliaConfig.request.categoryId.length > 0) {
+			ruleContexts.push('magento-category-' + algoliaConfig.request.categoryId);
+		}
+		
 		var instantsearchOptions = {
 			appId: algoliaConfig.applicationId,
 			apiKey: algoliaConfig.apiKey,
@@ -76,7 +85,7 @@ requirejs(['algoliaBundle'], function(algoliaBundle) {
 			},
 			searchParameters: {
 				hitsPerPage: algoliaConfig.hitsPerPage,
-				ruleContexts: ['magento_filters', ''] // Empty context to keep BC for already create rules in dashboard
+				ruleContexts: ruleContexts
 			},
 			searchFunction: function(helper) {
 				if (helper.state.query === '' && !algoliaConfig.isSearchPage) {
@@ -98,10 +107,8 @@ requirejs(['algoliaBundle'], function(algoliaBundle) {
 				
 				instantsearchOptions.searchParameters['facetsRefinements']['categories.level' + algoliaConfig.request.level] = [algoliaConfig.request.path];
 			} else {
-				instantsearchOptions.searchParameters = {
-					hierarchicalFacetsRefinements: {
-						'categories.level0': [algoliaConfig.request.path]
-					}
+				instantsearchOptions.searchParameters['hierarchicalFacetsRefinements'] = {
+					'categories.level0': [algoliaConfig.request.path]
 				}
 			}
 		}
@@ -319,7 +326,8 @@ requirejs(['algoliaBundle'], function(algoliaBundle) {
 						
 						hit.algoliaConfig = window.algoliaConfig;
 						
-						hit.__position = hit.__hitIndex + 1;
+						var state = search.helper.state;
+						hit.__position = (state.page * state.hitsPerPage) + hit.__hitIndex + 1;
 						
 						return hit;
 					}
@@ -442,7 +450,7 @@ requirejs(['algoliaBundle'], function(algoliaBundle) {
 			
 			if (facet.type === 'slider') {
 				delete templates.item;
-				
+
 				return ['rangeSlider', {
 					container: facet.wrapper.appendChild(createISWidgetContainer(facet.attribute)),
 					attributeName: facet.attribute,
@@ -452,7 +460,9 @@ requirejs(['algoliaBundle'], function(algoliaBundle) {
 					},
 					tooltips: {
 						format: function (formattedValue) {
-							return parseInt(formattedValue);
+							return facet.attribute.match(/price/) === null ?
+								parseInt(formattedValue) :
+								priceUtils.formatPrice(formattedValue, algoliaConfig.priceFormat);
 						}
 					}
 				}];

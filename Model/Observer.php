@@ -25,7 +25,7 @@ class Observer implements ObserverInterface
     {
         if ($this->config->isEnabledFrontEnd()) {
             if ($this->config->getApplicationID() && $this->config->getAPIKey()) {
-                if ($this->config->isPopupEnabled() || $this->config->isInstantEnabled()) {
+                if ($this->config->isAutoCompleteEnabled() || $this->config->isInstantEnabled()) {
                     /** @var Layout $layout */
                     $layout = $observer->getData('layout');
 
@@ -53,8 +53,12 @@ class Observer implements ObserverInterface
 
         /** @var \Magento\Catalog\Model\Category $category */
         $category = $this->registry->registry('current_category');
+        if (!$category) {
+            return;
+        }
+
         $displayMode = $this->config->getBackendRenderingDisplayMode();
-        if ($category && $displayMode === 'only_products' && $category->getDisplayMode() === 'PAGE') {
+        if ($displayMode === 'only_products' && $category->getDisplayMode() === 'PAGE') {
             return;
         }
 

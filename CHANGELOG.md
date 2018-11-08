@@ -1,5 +1,102 @@
 # CHANGE LOG
 
+## 1.8.3
+
+* Removed the default facet query rule (attribute "color") (#600)
+
+## 1.8.2
+
+* Fixed error which showed Instant search components on checkout page (#572)
+* Fixed administration categories and category merchandising on Magento 2.1 (#573)
+* Fixed indexing queue page on Magento 2.1 (#575)
+* Fixed configurable products' price calculation when parent product has zero price (#580)
+* Fixed processed jobs removal from indexing queue (#582)
+
+## 1.8.1
+
+* Fixed PHP 5.5 support (#562)
+* Fixed `archive` table creation (#566)
+* Fixed PHP notice on not recognised product type (#566)
+
+## 1.8.0
+
+### FEATURES
+- Possibility to [reindex specific SKUs](https://community.algolia.com/doc/m2/sku-reindexing-form/) (#536)
+    - the form will give an option to reindex specific SKU(s)
+    - if the product shouldn't be reindexed, the form shows the exact reason why the product is not indexed 
+- Category visual merchandiser - Magento 2.1 and higher (#510)
+    - the tool gives possibility to visually merchandise products on category pages powered by Algolia
+    - it's placed in category detail in tab "Algolia Merchandising"
+- Indexing queue page (#537)
+    - The page shows the status and remaining jobs in indexing queue
+    - It offers suggestions to improve performance of the queue to get the fastest indexing
+- "Non-castable" attributes can now be specified in configuration (#507)
+- Added support for tier prices (#558)
+
+### UPDATES
+- Configuration page was proofread and enhanced to provide better UX (#526, #529, #531)
+- Values of `sku`s and `color`s are now correctly index within record of main configurable product
+- Price in filter is correctly formatted (#539)
+- Use correct column name (`row_id` vs. `entity_id`) based on staging module availability (#544)
+- Improved `algolia_after_products_collection_build` event to pass all relevant parameters (#546)
+- The extension has improved [Continuous Integration build](https://github.com/algolia/algoliasearch-magento-2/blob/master/.github/CONTRIBUTING.md) checking quality of code, coding standards and tests (#557)
+- Refactored price calculation class (#558)
+
+### FIXES
+- Fixed incorrect replacement of "+" and "-" of toggle button of facet panel (#532)
+- Fixed indexed URLs for CMS pages (#551)
+
+## 1.7.2
+
+Fixed JavaScript issue causing malfunctioning the extension in IE 11 (#538)
+
+## 1.7.1
+
+### UPDATES
+- Algolia JS bundle were updated to it's latest version (#504)
+
+### FIXES
+- Fixed issue where configurable products were indexed with "0" prices (#527)
+- The extension doesn't throw a fatal error when Algolia credentials are not provided (#505)
+- Catalog rule's prices are now correctly indexed within configurable products (#506)
+- Scope is correctly added to URLs (#509, #513)
+
+## 1.7.0
+
+### FEATURES
+- [Click & Conversion analytics](https://www.algolia.com/doc/guides/analytics/click-analytics/) support (#435, #468, #486, #498) - [Documentation](https://community.algolia.com/magento/doc/m2/click-analytics/)
+- Option to automatically create ["facet" query rules](https://www.algolia.com/doc/guides/query-rules/query-rules-overview/?language=php#dynamic-facets--filters) (#438)
+- Extension now supports upcoming Algolia's A/B testing feature (#492)
+
+### UPDATES
+- Frontend event hooks mechanism was refactored to support multi event listeners (#437) - [Documentation](https://community.algolia.com/magento/doc/m2/frontend-events/)
+- Refactoring of code to be more robust and reliable (#436)
+- Product is updated in Algolia on it's stock status update (#443)
+- Product thumbnail size is now configurable via `etc/view.xml` file (#448)
+- `SKU`, `name`, `description` products' attributes are not casted from string (#483)
+- Parent product of update child product is now always reindexed (#482)
+- `EMPTY_QUEUE` constant name was replaced by more descriptive `PROCESS_FULL_QUEUE` name (#491)
+- Refactored `CategoryHelper` to remove memory leak (#495)
+- Expired special prices are now replaced by default prices even without reindex (#499)
+- [InstantSearch.js library](https://community.algolia.com/instantsearch.js/) was updated to it's latest version bringing [routing feature](https://community.algolia.com/instantsearch.js/v2/guides/routing.html) to the extension (#500)
+- Added link to Algolia configuration directly to "Stores" panel (#501)
+
+### FIXES
+- Extension now correctly removes disable products from Algolia (#447)
+- Fixed the issue when some records weren't indexed because of too big previous record (#451)
+- Fixed issue when product was not added to cart on first attempt after page load (#460)
+- Removed filenames with asterisks which prevented the extension from being installed on Windows (#461)
+- Fixed issue which fetched from DB not relevant sub products (#462)
+- Fix issues with wrong category names (#467)
+- Fixed issue when backend rendering was prevented not only on category pages (#471)
+- Pages from disabled stores are not indexed anymore (#475)
+- Fixed image types IDs to configure image sizes via `etc/view.xml` file (#478)
+- Fixed exploding of line breaks on User Agents setting for Prevent backend rendering feature to work on Windows servers (#479)
+- Correct default values for query suggestions (#484)
+- TMP index is now not removed with not used replica indices (#488)
+- Fixed documentation links (#490)
+- Fixed issue which overrode instant search search parameters (#501)
+
 ## 1.6.0
 
 ### FEATURES

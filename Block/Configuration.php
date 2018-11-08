@@ -2,6 +2,8 @@
 
 namespace Algolia\AlgoliaSearch\Block;
 
+use Algolia\AlgoliaSearch\Helper\ConfigHelper;
+use Magento\Framework\App\Request\Http;
 use Magento\Framework\Data\CollectionDataSourceInterface;
 use Magento\Framework\DataObject;
 
@@ -10,7 +12,7 @@ class Configuration extends Algolia implements CollectionDataSourceInterface
     public function isSearchPage()
     {
         if ($this->getConfigHelper()->isInstantEnabled()) {
-            /** @var \Magento\Framework\App\Request\Http $request */
+            /** @var Http $request */
             $request = $this->getRequest();
 
             if ($request->getFullActionName() === 'catalogsearch_result_index') {
@@ -46,6 +48,7 @@ class Configuration extends Algolia implements CollectionDataSourceInterface
 
         $currencyCode = $this->getCurrencyCode();
         $currencySymbol = $this->getCurrencySymbol();
+        $priceFormat = $this->getPriceFormat();
 
         $customerGroupId = $this->getGroupId();
 
@@ -56,10 +59,11 @@ class Configuration extends Algolia implements CollectionDataSourceInterface
         $refinementValue = '';
         $path = '';
         $level = '';
+        $categoryId = '';
 
         $addToCartParams = $this->getAddToCartParams();
 
-        /** @var \Magento\Framework\App\Request\Http $request */
+        /** @var Http $request */
         $request = $this->getRequest();
 
         /**
@@ -74,6 +78,8 @@ class Configuration extends Algolia implements CollectionDataSourceInterface
 
             if ($category && $category->getDisplayMode() !== 'PAGE') {
                 $category->getUrlInstance()->setStore($this->getStoreId());
+
+                $categoryId = $category->getId();
 
                 $level = -1;
                 foreach ($category->getPathIds() as $treeCategoryId) {
@@ -90,6 +96,11 @@ class Configuration extends Algolia implements CollectionDataSourceInterface
 
                 $isCategoryPage = true;
             }
+        }
+
+        $productId = null;
+        if ($config->isClickConversionAnalyticsEnabled() && $request->getFullActionName() === 'catalog_product_view') {
+            $productId = $this->getCurrentProduct()->getId();
         }
 
         /**
@@ -113,9 +124,9 @@ class Configuration extends Algolia implements CollectionDataSourceInterface
 
                 if ($refinementKey !== null) {
                     $refinementValue = $query;
-                    $query = "";
+                    $query = '';
                 } else {
-                    $refinementKey = "";
+                    $refinementKey = '';
                 }
             }
         }
@@ -130,7 +141,7 @@ class Configuration extends Algolia implements CollectionDataSourceInterface
                 'urlTrackedParameters' => $this->getUrlTrackedParameters(),
             ],
             'autocomplete' => [
-                'enabled' => (bool) $config->isAutoCompleteEnabled(),
+                'enabled' => $config->isAutoCompleteEnabled(),
                 'selector' => $config->getAutocompleteSelector(),
                 'sections' => $config->getAutocompleteSections(),
                 'nbOfProductsSuggestions' => $config->getNumberOfProductsSuggestions(),
@@ -154,15 +165,18 @@ class Configuration extends Algolia implements CollectionDataSourceInterface
             'isSearchPage' => $this->isSearchPage(),
             'isCategoryPage' => $isCategoryPage,
             'removeBranding' => (bool) $config->isRemoveBranding(),
+            'productId' => $productId,
             'priceKey' => $priceKey,
             'currencyCode' => $currencyCode,
             'currencySymbol' => $currencySymbol,
+            'priceFormat' => $priceFormat,
             'maxValuesPerFacet' => (int) $config->getMaxValuesPerFacet(),
             'autofocus' => true,
             'request' => [
                 'query' => html_entity_decode($query),
                 'refinementKey' => $refinementKey,
                 'refinementValue' => $refinementValue,
+                'categoryId' => $categoryId,
                 'path' => $path,
                 'level' => $level,
             ],
@@ -176,8 +190,12 @@ class Configuration extends Algolia implements CollectionDataSourceInterface
             ],
             'ccAnalytics' => [
                 'ISSelector' => $config->getClickConversionAnalyticsISSelector(),
+                'conversionAnalyticsMode' => $config->getConversionAnalyticsMode(),
+                'addToCartSelector' => $config->getConversionAnalyticsAddToCartSelector(),
+                'orderedProductIds' => $this->getOrderedProductIds($config, $request),
             ],
             'analytics' => $config->getAnalyticsConfig(),
+            'now' => $this->getTimestamp(),
             'translations' => [
                 'to' => __('to'),
                 'or' => __('or'),
@@ -231,5 +249,28 @@ class Configuration extends Algolia implements CollectionDataSourceInterface
         }
 
         return $urlTrackedParameters;
+    }
+
+    private function getOrderedProductIds(ConfigHelper $configHelper, Http $request)
+    {
+        $ids = [];
+
+        if ($configHelper->getConversionAnalyticsMode() === 'disabled'
+            || $request->getFrontName() !== 'checkout'
+            || $request->getActionName() !== 'success') {
+            return $ids;
+        }
+
+        $lastOrder = $this->getLastOrder();
+        if (!$lastOrder) {
+            return $ids;
+        }
+
+        $items = $lastOrder->getItems();
+        foreach ($items as $item) {
+            $ids[] = $item->getProductId();
+        }
+
+        return $ids;
     }
 }

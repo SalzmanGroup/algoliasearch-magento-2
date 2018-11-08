@@ -7,32 +7,36 @@ use Algolia\AlgoliaSearch\Helper\ConfigHelper;
 use Algolia\AlgoliaSearch\Helper\Data as CoreHelper;
 use Algolia\AlgoliaSearch\Helper\Entity\CategoryHelper;
 use Algolia\AlgoliaSearch\Helper\Entity\ProductHelper;
+use Magento\Checkout\Model\Session as CheckoutSession;
+use Magento\Customer\Model\Context as CustomerContext;
 use Magento\Framework\App\ActionInterface;
+use Magento\Framework\App\Http\Context as HttpContext;
 use Magento\Framework\Data\CollectionDataSourceInterface;
 use Magento\Framework\Data\Form\FormKey;
 use Magento\Framework\Locale\Currency;
+use Magento\Framework\Locale\Format;
 use Magento\Framework\Registry;
+use Magento\Framework\Stdlib\DateTime\DateTime;
 use Magento\Framework\Url\Helper\Data;
 use Magento\Framework\View\Element\Template;
 use Magento\Search\Helper\Data as CatalogSearchHelper;
-use Magento\Framework\App\Http\Context as HttpContext;
-use Magento\Customer\Model\Context as CustomerContext;
 
 class Algolia extends Template implements CollectionDataSourceInterface
 {
     private $config;
     private $catalogSearchHelper;
-    private $storeManager;
-    private $objectManager;
     private $registry;
     private $productHelper;
     private $currency;
+    private $format;
     private $algoliaHelper;
     private $urlHelper;
     private $formKey;
     private $httpContext;
     private $coreHelper;
     private $categoryHelper;
+    private $checkoutSession;
+    private $date;
 
     private $priceKey;
 
@@ -42,6 +46,7 @@ class Algolia extends Template implements CollectionDataSourceInterface
         CatalogSearchHelper $catalogSearchHelper,
         ProductHelper $productHelper,
         Currency $currency,
+        Format $format,
         Registry $registry,
         AlgoliaHelper $algoliaHelper,
         Data $urlHelper,
@@ -49,12 +54,15 @@ class Algolia extends Template implements CollectionDataSourceInterface
         HttpContext $httpContext,
         CoreHelper $coreHelper,
         CategoryHelper $categoryHelper,
+        CheckoutSession $checkoutSession,
+        DateTime $date,
         array $data = []
     ) {
         $this->config = $config;
         $this->catalogSearchHelper = $catalogSearchHelper;
         $this->productHelper = $productHelper;
         $this->currency = $currency;
+        $this->format = $format;
         $this->registry = $registry;
         $this->algoliaHelper = $algoliaHelper;
         $this->urlHelper = $urlHelper;
@@ -62,6 +70,8 @@ class Algolia extends Template implements CollectionDataSourceInterface
         $this->httpContext = $httpContext;
         $this->coreHelper = $coreHelper;
         $this->categoryHelper = $categoryHelper;
+        $this->checkoutSession = $checkoutSession;
+        $this->date = $date;
 
         parent::__construct($context, $data);
     }
@@ -116,6 +126,11 @@ class Algolia extends Template implements CollectionDataSourceInterface
         return $this->getStore()->getCurrentCurrencyCode();
     }
 
+    public function getPriceFormat()
+    {
+        return $this->format->getPriceFormat();
+    }
+
     public function getGroupId()
     {
         return $this->httpContext->getValue(CustomerContext::CONTEXT_GROUP);
@@ -147,6 +162,18 @@ class Algolia extends Template implements CollectionDataSourceInterface
         return $this->registry->registry('current_category');
     }
 
+    /** @return \Magento\Catalog\Model\Product */
+    public function getCurrentProduct()
+    {
+        return $this->registry->registry('product');
+    }
+
+    /** @return \Magento\Sales\Model\Order */
+    public function getLastOrder()
+    {
+        return $this->checkoutSession->getLastRealOrder();
+    }
+
     public function getAddToCartParams()
     {
         $url = $this->getAddToCartUrl();
@@ -157,6 +184,11 @@ class Algolia extends Template implements CollectionDataSourceInterface
         ];
     }
 
+    public function getTimestamp()
+    {
+        return $this->date->gmtTimestamp();
+    }
+
     private function getAddToCartUrl($additional = [])
     {
         $continueUrl = $this->urlHelper->getEncodedUrl($this->_urlBuilder->getCurrentUrl());
@@ -164,7 +196,7 @@ class Algolia extends Template implements CollectionDataSourceInterface
 
         $routeParams = [
             $urlParamName => $continueUrl,
-            '_secure' => $this->algoliaHelper->getRequest()->isSecure()
+            '_secure' => $this->algoliaHelper->getRequest()->isSecure(),
         ];
 
         if ($additional !== []) {
